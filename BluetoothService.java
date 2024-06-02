@@ -14,18 +14,24 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
+import android.Manifest;
 
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.util.UUID;
 
 public class BluetoothService extends Service {
+
+    // 추가===========================================================================================================================================
+    private boolean isServiceConnected = false; // 추가된 부분
 
     public static final String ACTION_GATT_CONNECTED = "com.example.forcapstone2.ACTION_GATT_CONNECTED";
     public static final String ACTION_GATT_DISCONNECTED = "com.example.forcapstone2.ACTION_GATT_DISCONNECTED";
@@ -99,7 +105,11 @@ public class BluetoothService extends Service {
     @SuppressLint("MissingPermission")
     private void connectToDevice(BluetoothDevice device) {
         Log.d("BluetoothService", "Connecting to device: " + device.getAddress());
-        bluetoothGatt = device.connectGatt(this, false, gattCallback);
+        if (ContextCompat.checkSelfPermission(BluetoothService.this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+            bluetoothGatt = device.connectGatt(BluetoothService.this, false, gattCallback);
+        } else {
+            showToast("Bluetooth Connect permission is required to connect to device");
+        }
     }
 
     private final BluetoothGattCallback gattCallback = new BluetoothGattCallback() {
@@ -115,6 +125,8 @@ public class BluetoothService extends Service {
                 Log.i("BluetoothService", "Disconnected from GATT server.");
                 showToast("Disconnected");
                 broadcastUpdate(ACTION_GATT_DISCONNECTED);
+            } else {
+                Log.w("BluetoothService", "Connection state changed to " + newState + " with status " + status);
             }
         }
 
@@ -142,17 +154,29 @@ public class BluetoothService extends Service {
             WaterChange = new String(data); // 바이트 데이터를 문자열로 변환하여 WaterChange에 저장
             Log.d("BluetoothService", "Received data: " + WaterChange);
         }
-
     };
+
+    // 추가==============================================================================================================================
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        isServiceConnected = true; // 추가된 부분
+        return START_NOT_STICKY;
+    }
 
     @SuppressLint("MissingPermission")
     @Override
     public void onDestroy() {
         super.onDestroy();
+        isServiceConnected = false; // 추가================================================================================================
         if (bluetoothGatt != null) {
             bluetoothGatt.close();
             bluetoothGatt = null;
         }
+    }
+
+    // 추가==========================================================================================================================================
+    public boolean isServiceConnected() {
+        return isServiceConnected;
     }
 
     private void showToast(final String message) {
