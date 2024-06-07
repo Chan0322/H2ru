@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private int currentAmount = 0;
     private TextView nowAmount;
 
-    private final Handler handler = new Handler(Looper.getMainLooper()) {
+    private Handler handler = new Handler(Looper.getMainLooper()) {
         @Override
         public void handleMessage(@NonNull Message msg) {
             nowAmount.setText(BluetoothService.receivedMessage);
@@ -233,23 +233,14 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        new Runnable() {
-            @Override
-            public void run() {
-//                handler.postDelayed(() -> {
+        reloadIcon.setOnClickListener(v -> {
+            handler.post(() -> {
                 if (bluetoothService != null) {
                     bluetoothService.readData();
                     Message message = handler.obtainMessage();
                     handler.sendMessage(message);
                 }
-//                }, 3000);
-                handler.postDelayed(this, 3000);
-            }
-        }.run();
-
-
-        reloadIcon.setOnClickListener(v -> {
-
+            });
             Toast.makeText(getApplicationContext(), "새로고침 성공!", Toast.LENGTH_SHORT).show();
 
             myApp.reloadAmount();
